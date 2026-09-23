@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Three.js Procedural Model Exporter</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- HEADER -->
+      <header id="app-header"></header>
+
+      <!-- WORKSPACE -->
+      <main class="main-workspace" id="main-workspace">
+        <!-- LEFT: SCENE HIERARCHY -->
+        <aside class="sidebar-panel" id="sidebar-left">
+          <div class="panel-header">
+            <span>Scene Hierarchy</span>
+            <div class="header-actions">
+              <span id="scene-part-count" class="badge-tag">0 parts</span>
+            </div>
+          </div>
+          <div class="tree-search-bar">
+            <input
+              type="text"
+              id="tree-search-input"
+              class="text-input"
+              placeholder="Search components..."
+            />
+          </div>
+          <div class="panel-content" id="scene-tree-container"></div>
+        </aside>
+
+        <!-- CENTER: 3D VIEWPORT -->
+        <section class="viewport-area" id="viewport-center">
+          <div class="canvas-container" id="canvas-container"></div>
+          <div id="viewport-overlay"></div>
+        </section>
+
+        <!-- RIGHT: INSPECTOR & TRANSFORM -->
+        <aside class="sidebar-panel right" id="sidebar-right">
+          <div class="panel-header">
+            <span>Inspector</span>
+          </div>
+          <div class="panel-content" id="inspector-container"></div>
+        </aside>
+      </main>
+
+      <!-- BOTTOM: EXPORT DOCK -->
+      <footer class="export-dock" id="export-dock"></footer>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
