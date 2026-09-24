@@ -3,10 +3,11 @@ import { SelectionManager } from '../viewer/selection';
 
 export interface SceneTreeCallbacks {
   onSelect: (object: THREE.Object3D | null) => void;
-  onRename: (object: THREE.Object3D, newName: string) => void;
+  onRename: (object: THREE.Object3D, newName: string, prevName?: string) => void;
   onVisibilityChange: (object: THREE.Object3D, visible: boolean) => void;
   onSoloToggle: (object: THREE.Object3D) => void;
   onLockToggle: (object: THREE.Object3D) => void;
+  onDelete?: (object: THREE.Object3D) => void;
 }
 
 export class SceneTree {
@@ -176,6 +177,19 @@ export class SceneTree {
       });
       actions.appendChild(lockBtn);
 
+      // Delete button (non-root nodes)
+      if (node !== this.rootObject && this.callbacks.onDelete) {
+        const delBtn = document.createElement('button');
+        delBtn.className = 'tree-action-btn delete-btn';
+        delBtn.innerHTML = '🗑️';
+        delBtn.title = `Delete "${name}" (Delete / Backspace)`;
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.callbacks.onDelete?.(node);
+        });
+        actions.appendChild(delBtn);
+      }
+
       row.appendChild(actions);
 
       // Row click selection
@@ -208,8 +222,9 @@ export class SceneTree {
     const finish = () => {
       const newName = input.value.trim();
       if (newName && newName !== node.name) {
+        const prevName = node.name;
         node.name = newName;
-        this.callbacks.onRename(node, newName);
+        this.callbacks.onRename(node, newName, prevName);
       }
       this.render();
     };

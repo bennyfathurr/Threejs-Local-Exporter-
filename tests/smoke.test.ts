@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { createModel } from '../src/generated/createModel';
 import { createDroneModel } from '../src/generated/createDroneModel';
+import { createModel as createLakesideModel } from '../src/generated/createLakesideTownModel';
 import { buildInventory } from '../src/model/inventory';
 import { cloneForExport } from '../src/model/cloneForExport';
 import { normalizeTransforms } from '../src/model/normalizeTransforms';
@@ -59,6 +60,49 @@ describe('Procedural Model Factories Smoke Tests', () => {
     expect(parts).toContain('Central_Fuselage_Core');
     expect(parts).toContain('Chassis_Aerodynamic_Shell');
     expect(parts).toContain('MultiSensor_Gimbal_Assembly');
+  });
+
+  it('loads the four-view lakeside study with a dominant lake and shaped scene geometry', () => {
+    const lakeside = createLakesideModel();
+    expect(lakeside).toBeInstanceOf(THREE.Group);
+    expect(lakeside.name).toBe('Kambang_Iwak_Draft_Model');
+
+    const waterMesh = lakeside.getObjectByName('Lake_Water_Surface') as THREE.Mesh;
+    const ground = lakeside.getObjectByName('Ground_Plate') as THREE.Mesh;
+    expect(waterMesh).toBeDefined();
+    expect((waterMesh.material as THREE.Material).side).toBe(THREE.DoubleSide);
+    expect(waterMesh.position.y).toBeLessThan(ground.position.y);
+    const landShape = (ground.geometry as THREE.ExtrudeGeometry).parameters.shapes as THREE.Shape;
+    expect(landShape.holes.length).toBe(1);
+    const facade = lakeside.getObjectByName('Northwest_Block_A_Recessed_Facade') as THREE.Mesh;
+    const facadeShape = (facade.geometry as THREE.ExtrudeGeometry).parameters.shapes as THREE.Shape;
+    expect(facadeShape.holes.length).toBeGreaterThan(2);
+    const canopy = lakeside.getObjectByName('Peninsula_Tree_1_Canopy_Lobe_1') as THREE.Mesh;
+    expect(canopy.geometry.type).toBe('BufferGeometry');
+    expect(canopy.geometry.getAttribute('normal').count).toBeGreaterThan(100);
+
+    const lakeGeometry = waterMesh.geometry as THREE.BufferGeometry;
+    expect(lakeGeometry.getAttribute('position').count).toBeGreaterThan(100);
+    expect(lakeside.getObjectByName('Continuous_Pedestrian_Loop')).toBeDefined();
+    expect(lakeside.getObjectByName('Tree_Peninsula')).toBeDefined();
+    expect(lakeside.getObjectByName('Bridge_Cambered_Deck')).toBeDefined();
+    expect(lakeside.getObjectByName('Northwest_Block_A_Roof')).toBeDefined();
+    expect(lakeside.getObjectByName('Peninsula_Tree_1_Canopy_Lobe_1')).toBeDefined();
+    expect(lakeside.getObjectByName('Northwest_Block_A_Recessed_Facade')).toBeDefined();
+    expect(lakeside.getObjectByName('Bridge_Deck_Plank_1')).toBeDefined();
+
+    const buildings = lakeside.getObjectByName('Perimeter_Buildings') as THREE.Group;
+    const trees = lakeside.getObjectByName('Tree_Canopies') as THREE.Group;
+    expect(buildings.children.length).toBeGreaterThanOrEqual(20);
+    expect(trees.children.length).toBeGreaterThan(55);
+    const bounds = new THREE.Box3().setFromObject(lakeside);
+    expect(bounds.max.x - bounds.min.x).toBeCloseTo(56, 0);
+    expect(bounds.max.z - bounds.min.z).toBeCloseTo(30, 0);
+    const stats = buildInventory(lakeside).stats;
+    expect(stats.totalTriangles).toBeGreaterThan(85_000);
+    expect(stats.totalTriangles).toBeLessThan(105_000);
+    expect(stats.meshCount).toBeLessThan(1_300);
+    expect(buildInventory(createLakesideModel()).stats.totalTriangles).toBe(stats.totalTriangles);
   });
 
   it('compiles and runs arbitrary user-supplied TypeScript code with THREE in browser sandbox', () => {

@@ -1,11 +1,16 @@
 import * as THREE from 'three';
 import { PRESETS, loadGlbFromFile, loadModelFromTsJsFile } from '../model/loadFactory';
 import { SceneContext } from '../viewer/createScene';
+import { PRIMITIVE_DEFINITIONS, PrimitiveType } from '../model/meshOperations';
 
 export interface ToolbarCallbacks {
-  onModelLoaded: (root: THREE.Object3D) => void;
+  onModelLoaded: (root: THREE.Object3D, referenceImage?: string) => void;
   onResetView: () => void;
   onOpenCodeEditor: () => void;
+  onOpenAiGenerator: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onCreateMesh?: (type: PrimitiveType) => void;
 }
 
 export class Toolbar {
@@ -40,6 +45,36 @@ export class Toolbar {
           ${PRESETS.map((p) => `<option value="${p.id}" ${p.id === this.activePresetId ? 'selected' : ''}>${p.name}</option>`).join('')}
         </select>
 
+        <!-- Undo / Redo Buttons -->
+        <div style="display:flex; align-items:center; gap:3px; margin-left: 4px; padding: 0 4px; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">
+          <button class="btn btn-sm" id="btn-undo" title="Undo (Ctrl+Z / ⌘Z)" disabled>
+            <span>↶</span> Undo
+          </button>
+          <button class="btn btn-sm" id="btn-redo" title="Redo (Ctrl+Y / ⌘⇧Z)" disabled>
+            <span>↷</span> Redo
+          </button>
+        </div>
+
+        <!-- Add Primitive Mesh Dropdown -->
+        <div class="dropdown-wrapper" style="position:relative; margin-left: 4px;">
+          <button class="btn btn-sm" id="btn-tb-add-mesh" style="background: rgba(14, 165, 233, 0.12); border-color: rgba(14, 165, 233, 0.35); color: var(--accent-cyan); font-weight:600;" title="Create a new 3D mesh primitive">
+            <span>+ Add Mesh ▾</span>
+          </button>
+          <div class="mesh-create-dropdown" id="tb-mesh-dropdown" style="display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:1000;">
+            ${PRIMITIVE_DEFINITIONS.map(
+              (p) => `
+              <button class="mesh-dropdown-item" data-type="${p.type}">
+                <span class="mesh-item-icon">${p.icon}</span>
+                <div class="mesh-item-text">
+                  <span class="mesh-item-title">${p.label}</span>
+                  <span class="mesh-item-desc">${p.description}</span>
+                </div>
+              </button>
+            `
+            ).join('')}
+          </div>
+        </div>
+
         <!-- Open In-Browser Code Editor -->
         <button class="btn btn-sm" id="btn-open-code-modal" style="margin-left: 4px;" title="Paste or edit TypeScript/JavaScript Three.js code">
           <span>⚡ Paste / Edit Code</span>
@@ -47,9 +82,14 @@ export class Toolbar {
 
         <!-- Direct Upload Button for TS, JS, GLB -->
         <label class="btn btn-sm" style="margin-left: 2px; cursor: pointer;" title="Upload custom .ts, .js, or .glb file">
-          <span>📂 Upload File (.ts / .js / .glb)</span>
+          <span>📂 Upload File</span>
           <input type="file" id="universal-file-input" accept=".ts,.js,.tsx,.jsx,.glb,.gltf" style="display:none;" />
         </label>
+
+        <!-- AI Generate Button -->
+        <button class="btn btn-sm btn-primary" id="btn-open-ai-modal" style="margin-left: 6px; background: linear-gradient(135deg, #06b6d4, #6366f1); border:none; box-shadow: 0 0 12px rgba(6, 182, 212, 0.4); font-weight:600;" title="Generate 3D procedural model directly from an image using Gemini / OpenAI">
+          <span>✨ AI Generate (img2threejs)</span>
+        </button>
       </div>
 
       <!-- RIGHT CONTROLS -->
@@ -78,13 +118,18 @@ export class Toolbar {
       const preset = PRESETS.find((p) => p.id === this.activePresetId);
       if (preset) {
         const model = preset.factory(preset.defaultSpec);
-        this.callbacks.onModelLoaded(model);
+        this.callbacks.onModelLoaded(model, preset.referenceImage);
       }
     });
 
     // Open Code Modal
     this.container.querySelector('#btn-open-code-modal')?.addEventListener('click', () => {
       this.callbacks.onOpenCodeEditor();
+    });
+
+    // Open AI Generate Modal
+    this.container.querySelector('#btn-open-ai-modal')?.addEventListener('click', () => {
+      this.callbacks.onOpenAiGenerator();
     });
 
     // Universal File Input (.ts, .js, .glb, .gltf)
@@ -121,6 +166,41 @@ export class Toolbar {
     bgColorPicker.addEventListener('input', updateBg);
     chkTransparent.addEventListener('change', updateBg);
 
+    // Undo / Redo
+    this.container.querySelector('#btn-undo')?.addEventListener('click', () => {
+      this.callbacks.onUndo?.();
+    });
+    this.container.querySelector('#btn-redo')?.addEventListener('click', () => {
+      this.callbacks.onRedo?.();
+    });
+
+    // Add Mesh Dropdown
+    const btnAddMesh = this.container.querySelector('#btn-tb-add-mesh') as HTMLButtonElement | null;
+    const dropdownAddMesh = this.container.querySelector('#tb-mesh-dropdown') as HTMLElement | null;
+
+    if (btnAddMesh && dropdownAddMesh) {
+      btnAddMesh.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isShown = dropdownAddMesh.style.display === 'flex';
+        dropdownAddMesh.style.display = isShown ? 'none' : 'flex';
+      });
+
+      dropdownAddMesh.querySelectorAll('.mesh-dropdown-item').forEach((item) => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const type = (item as HTMLElement).getAttribute('data-type') as PrimitiveType;
+          if (type) {
+            this.callbacks.onCreateMesh?.(type);
+          }
+          dropdownAddMesh.style.display = 'none';
+        });
+      });
+
+      window.addEventListener('click', () => {
+        dropdownAddMesh.style.display = 'none';
+      });
+    }
+
     this.container.querySelector('#btn-info')?.addEventListener('click', () => {
       alert(
         'Three.js Procedural Model Exporter\n\n' +
@@ -130,5 +210,12 @@ export class Toolbar {
         '• Live scene inventory, raycast selection, solo/lock modes, and validation report.'
       );
     });
+  }
+
+  public updateHistoryState(canUndo: boolean, canRedo: boolean) {
+    const btnUndo = this.container.querySelector('#btn-undo') as HTMLButtonElement | null;
+    const btnRedo = this.container.querySelector('#btn-redo') as HTMLButtonElement | null;
+    if (btnUndo) btnUndo.disabled = !canUndo;
+    if (btnRedo) btnRedo.disabled = !canRedo;
   }
 }

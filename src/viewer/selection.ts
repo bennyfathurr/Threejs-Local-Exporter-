@@ -10,6 +10,7 @@ export interface SelectionManager {
   isLocked: (object: THREE.Object3D) => boolean;
   isSoloed: (object: THREE.Object3D) => boolean;
   soloObject: (object: THREE.Object3D | null) => void;
+  refreshHighlight: () => void;
   dispose: () => void;
 }
 
@@ -18,7 +19,8 @@ export function createSelectionManager(
   cameraProvider: () => THREE.Camera,
   modelRootProvider: () => THREE.Object3D,
   scene: THREE.Scene,
-  onSelectionChange: (object: THREE.Object3D | null) => void
+  onSelectionChange: (object: THREE.Object3D | null) => void,
+  isGizmoInteracting?: () => boolean
 ): SelectionManager {
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
@@ -134,6 +136,14 @@ export function createSelectionManager(
     updateHighlight();
   };
 
+  const refreshHighlight = () => {
+    if (highlightBox && selectedObject) {
+      highlightBox.update();
+    } else {
+      updateHighlight();
+    }
+  };
+
   // Pointer event handling for 3D picking
   let pointerDownPos = { x: 0, y: 0 };
   const onPointerDown = (e: MouseEvent) => {
@@ -141,6 +151,8 @@ export function createSelectionManager(
   };
 
   const onPointerUp = (e: MouseEvent) => {
+    if (isGizmoInteracting && isGizmoInteracting()) return;
+
     // Only register click if pointer did not drag
     const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
     if (dist > 5) return;
@@ -195,6 +207,7 @@ export function createSelectionManager(
     isLocked,
     isSoloed,
     soloObject,
+    refreshHighlight,
     dispose,
   };
 }

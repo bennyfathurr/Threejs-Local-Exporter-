@@ -1,18 +1,29 @@
 import * as THREE from 'three';
 import { SceneContext } from '../viewer/createScene';
 import { ViewMode, applyViewMode } from '../viewer/viewModes';
+import { TransformGizmoManager } from '../viewer/transformGizmo';
+import { HistoryManager } from '../model/history';
 
 export class ViewportOverlay {
   private container: HTMLElement;
   private sceneCtx: SceneContext;
+  private transformGizmo?: TransformGizmoManager;
+  private historyManager?: HistoryManager;
   private currentMode: ViewMode = 'material';
   private referenceOpacity: number = 0.5;
   private referenceVisible: boolean = false;
   private refImgEl: HTMLImageElement | null = null;
 
-  constructor(container: HTMLElement, sceneCtx: SceneContext) {
+  constructor(
+    container: HTMLElement,
+    sceneCtx: SceneContext,
+    transformGizmo?: TransformGizmoManager,
+    historyManager?: HistoryManager
+  ) {
     this.container = container;
     this.sceneCtx = sceneCtx;
+    this.transformGizmo = transformGizmo;
+    this.historyManager = historyManager;
     this.render();
   }
 
@@ -21,10 +32,37 @@ export class ViewportOverlay {
     const toolbar = document.createElement('div');
     toolbar.className = 'viewport-toolbar';
     toolbar.innerHTML = `
+      <!-- Unity Transform Gizmo Tools -->
+      <div class="toolbar-group transform-tools" aria-label="Transform Tools">
+        <button class="tool-btn active" id="btn-gizmo-trans" title="Move Tool (Shortcut: W) - Drag red/green/blue axis or plane to translate">
+          ✛ Move
+        </button>
+        <button class="tool-btn" id="btn-gizmo-rot" title="Rotate Tool (Shortcut: E) - Drag rings to rotate">
+          🔄 Rotate
+        </button>
+        <button class="tool-btn" id="btn-gizmo-scale" title="Scale Tool (Shortcut: R) - Drag handles to scale">
+          ⤢ Scale
+        </button>
+        <button class="tool-btn" id="btn-gizmo-space" title="Toggle Coordinate Space: World / Local (Shortcut: X)">
+          🌐 <span id="lbl-gizmo-space">World</span>
+        </button>
+        <button class="tool-btn" id="btn-gizmo-snap" title="Toggle Snapping (0.5m / 15°)">
+          🧲 Snap
+        </button>
+      </div>
+
       <!-- Camera Mode -->
       <div class="toolbar-group">
         <button class="tool-btn active" id="btn-cam-persp" title="Perspective Camera">Persp</button>
         <button class="tool-btn" id="btn-cam-ortho" title="Orthographic Camera">Ortho</button>
+      </div>
+
+      <!-- Orthographic reference directions -->
+      <div class="toolbar-group" aria-label="Orthographic views">
+        <button class="tool-btn" id="btn-view-top" title="Top orthographic view">Top</button>
+        <button class="tool-btn" id="btn-view-bottom" title="Bottom orthographic view">Bottom</button>
+        <button class="tool-btn" id="btn-view-left" title="Left profile view">Left</button>
+        <button class="tool-btn" id="btn-view-right" title="Right profile view">Right</button>
       </div>
 
       <!-- View Modes -->
@@ -44,6 +82,8 @@ export class ViewportOverlay {
 
       <!-- Actions -->
       <div class="toolbar-group">
+        <button class="tool-btn" id="btn-vp-undo" title="Undo (Ctrl+Z / ⌘Z)" disabled>↶</button>
+        <button class="tool-btn" id="btn-vp-redo" title="Redo (Ctrl+Y / ⌘⇧Z)" disabled>↷</button>
         <button class="tool-btn" id="btn-reset-view" title="Reset Camera View">⟲ Reset</button>
       </div>
     `;
@@ -85,6 +125,38 @@ export class ViewportOverlay {
   }
 
   private bindEvents(toolbar: HTMLElement, refHud: HTMLElement) {
+    // Transform Gizmo Tool Toggles
+    const btnGizmoTrans = toolbar.querySelector('#btn-gizmo-trans') as HTMLButtonElement | null;
+    const btnGizmoRot = toolbar.querySelector('#btn-gizmo-rot') as HTMLButtonElement | null;
+    const btnGizmoScale = toolbar.querySelector('#btn-gizmo-scale') as HTMLButtonElement | null;
+    const btnGizmoSpace = toolbar.querySelector('#btn-gizmo-space') as HTMLButtonElement | null;
+    const btnGizmoSnap = toolbar.querySelector('#btn-gizmo-snap') as HTMLButtonElement | null;
+
+    btnGizmoTrans?.addEventListener('click', () => {
+      this.transformGizmo?.setMode('translate');
+      this.updateGizmoMode('translate');
+    });
+    btnGizmoRot?.addEventListener('click', () => {
+      this.transformGizmo?.setMode('rotate');
+      this.updateGizmoMode('rotate');
+    });
+    btnGizmoScale?.addEventListener('click', () => {
+      this.transformGizmo?.setMode('scale');
+      this.updateGizmoMode('scale');
+    });
+    btnGizmoSpace?.addEventListener('click', () => {
+      if (this.transformGizmo) {
+        const nextSpace = this.transformGizmo.toggleSpace();
+        this.updateGizmoSpace(nextSpace);
+      }
+    });
+    btnGizmoSnap?.addEventListener('click', () => {
+      if (this.transformGizmo) {
+        const snap = this.transformGizmo.toggleSnap();
+        this.updateGizmoSnap(snap);
+      }
+    });
+
     // Camera toggles
     const btnPersp = toolbar.querySelector('#btn-cam-persp') as HTMLButtonElement;
     const btnOrtho = toolbar.querySelector('#btn-cam-ortho') as HTMLButtonElement;
@@ -100,6 +172,14 @@ export class ViewportOverlay {
       btnPersp.classList.remove('active');
       this.sceneCtx.setCameraType('orthographic');
     });
+
+    for (const view of ['top', 'bottom', 'left', 'right'] as const) {
+      toolbar.querySelector(`#btn-view-${view}`)?.addEventListener('click', () => {
+        btnOrtho.classList.add('active');
+        btnPersp.classList.remove('active');
+        this.sceneCtx.setViewDirection(view);
+      });
+    }
 
     // View modes
     const modeBtns = {
@@ -146,6 +226,24 @@ export class ViewportOverlay {
       btnShadows.classList.toggle('active', shadowsOn);
     });
 
+    // Undo / Redo
+    const btnVpUndo = toolbar.querySelector('#btn-vp-undo') as HTMLButtonElement | null;
+    const btnVpRedo = toolbar.querySelector('#btn-vp-redo') as HTMLButtonElement | null;
+
+    btnVpUndo?.addEventListener('click', () => {
+      this.historyManager?.undo();
+    });
+    btnVpRedo?.addEventListener('click', () => {
+      this.historyManager?.redo();
+    });
+
+    if (this.historyManager) {
+      this.historyManager.addListener((e) => {
+        if (btnVpUndo) btnVpUndo.disabled = !e.canUndo;
+        if (btnVpRedo) btnVpRedo.disabled = !e.canRedo;
+      });
+    }
+
     // Reset View
     toolbar.querySelector('#btn-reset-view')?.addEventListener('click', () => {
       this.sceneCtx.resetCamera();
@@ -172,5 +270,47 @@ export class ViewportOverlay {
         this.refImgEl.style.opacity = this.referenceOpacity.toString();
       }
     });
+  }
+
+  public setReferenceImage(src: string, autoEnable = true) {
+    if (this.refImgEl) {
+      this.refImgEl.src = src;
+      if (autoEnable) {
+        this.referenceVisible = true;
+        this.refImgEl.style.display = 'block';
+        this.refImgEl.style.opacity = this.referenceOpacity.toString();
+
+        const chkRef = this.container.querySelector('#chk-ref-enable') as HTMLInputElement;
+        const rngRef = this.container.querySelector('#rng-ref-opacity') as HTMLInputElement;
+        if (chkRef) chkRef.checked = true;
+        if (rngRef) rngRef.disabled = false;
+      }
+    }
+  }
+
+  public updateGizmoMode(mode: 'translate' | 'rotate' | 'scale') {
+    const btnTrans = this.container.querySelector('#btn-gizmo-trans');
+    const btnRot = this.container.querySelector('#btn-gizmo-rot');
+    const btnScale = this.container.querySelector('#btn-gizmo-scale');
+    btnTrans?.classList.toggle('active', mode === 'translate');
+    btnRot?.classList.toggle('active', mode === 'rotate');
+    btnScale?.classList.toggle('active', mode === 'scale');
+  }
+
+  public updateGizmoSpace(space: 'world' | 'local') {
+    const lblSpace = this.container.querySelector('#lbl-gizmo-space');
+    if (lblSpace) lblSpace.textContent = space === 'world' ? 'World' : 'Local';
+  }
+
+  public updateGizmoSnap(snap: boolean) {
+    const btnSnap = this.container.querySelector('#btn-gizmo-snap');
+    btnSnap?.classList.toggle('active', snap);
+  }
+
+  public updateHistoryState(canUndo: boolean, canRedo: boolean) {
+    const btnUndo = this.container.querySelector('#btn-vp-undo') as HTMLButtonElement | null;
+    const btnRedo = this.container.querySelector('#btn-vp-redo') as HTMLButtonElement | null;
+    if (btnUndo) btnUndo.disabled = !canUndo;
+    if (btnRedo) btnRedo.disabled = !canRedo;
   }
 }

@@ -8,6 +8,7 @@ export interface ModelPreset {
   category: 'Architectural' | 'Industrial' | 'Mechanical' | 'User Generated';
   description: string;
   defaultSpec?: unknown;
+  referenceImage?: string;
   factory: (spec?: unknown, options?: unknown) => THREE.Object3D;
 }
 
@@ -28,20 +29,42 @@ export function getDiscoveredPresets(): ModelPreset[] {
       (typeof mod.generateModel === 'function' && mod.generateModel);
 
     if (factoryFn) {
-      const formattedName = filename
+      let displayName = filename
+        .replace(/^create/i, '')
+        .replace(/model$/i, '')
         .replace(/([A-Z])/g, ' $1')
         .replace(/_/g, ' ')
         .trim();
 
+      let referenceImage: string | undefined;
+
+      if (filename.toLowerCase().includes('lakeside')) {
+        displayName = 'Kambang Iwak (draft four-view study)';
+        referenceImage = '/reference/kambang-iwak-production-reference.png';
+      } else if (filename.toLowerCase().includes('drone')) {
+        displayName = 'Autonomous Survey Drone';
+      } else if (filename.toLowerCase() === 'createmodel' || filename.toLowerCase().includes('villa')) {
+        displayName = 'Modern Architectural Villa';
+        referenceImage = '/reference/aerial_reference.jpg';
+      }
+
       presets.push({
         id: filename.toLowerCase(),
-        name: formattedName.charAt(0).toUpperCase() + formattedName.slice(1),
+        name: displayName,
         category: filename.includes('drone') ? 'Industrial' : 'Architectural',
         description: `Factory from ${filePath}`,
+        referenceImage,
         factory: (spec, opt) => (factoryFn as (s?: unknown, o?: unknown) => THREE.Object3D)(spec, opt),
       });
     }
   }
+
+  // Put the user's lakeside town first in the list
+  presets.sort((a, b) => {
+    if (a.id.includes('lakeside')) return -1;
+    if (b.id.includes('lakeside')) return 1;
+    return 0;
+  });
 
   return presets;
 }
