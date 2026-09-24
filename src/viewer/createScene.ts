@@ -15,11 +15,13 @@ export interface SceneContext {
   hemiLight: THREE.HemisphereLight;
   setCameraType: (type: 'perspective' | 'orthographic') => void;
   resetCamera: () => void;
+  setViewDirection: (view: 'top' | 'bottom' | 'left' | 'right') => void;
   frameObject: (object: THREE.Object3D) => void;
   setGridVisible: (visible: boolean) => void;
   setAxesVisible: (visible: boolean) => void;
   setShadowsEnabled: (enabled: boolean) => void;
   setBackgroundColor: (color: string, transparent: boolean) => void;
+  addCameraChangeListener: (listener: (camera: THREE.Camera) => void) => () => void;
   dispose: () => void;
 }
 
@@ -39,6 +41,7 @@ export function createScene(container: HTMLElement): SceneContext {
   perspectiveCamera.position.set(15, 12, 18);
 
   const frustumSize = 25;
+  let currentOrthoHeight = frustumSize;
   const orthographicCamera = new THREE.OrthographicCamera(
     (-frustumSize * aspect) / 2,
     (frustumSize * aspect) / 2,
@@ -50,6 +53,8 @@ export function createScene(container: HTMLElement): SceneContext {
   orthographicCamera.position.set(15, 12, 18);
 
   let activeCamera: THREE.Camera = perspectiveCamera;
+  let lastPerspectivePosition = perspectiveCamera.position.clone();
+  let lastPerspectiveTarget = new THREE.Vector3(0, 2, 0);
 
   // 3. Renderer setup
   const renderer = new THREE.WebGLRenderer({
@@ -111,35 +116,95 @@ export function createScene(container: HTMLElement): SceneContext {
   axesHelper.userData = { isEditorHelper: true };
   scene.add(axesHelper);
 
+  const cameraListeners = new Set<(camera: THREE.Camera) => void>();
+  const notifyCameraChange = () => {
+    for (const listener of cameraListeners) {
+      listener(activeCamera);
+    }
+  };
+
+  const addCameraChangeListener = (listener: (camera: THREE.Camera) => void) => {
+    cameraListeners.add(listener);
+    return () => {
+      cameraListeners.delete(listener);
+    };
+  };
+
   // Helper methods
   const setCameraType = (type: 'perspective' | 'orthographic') => {
     const prevPos = activeCamera.position.clone();
     const prevTarget = controls.target.clone();
 
     if (type === 'orthographic') {
+      if (activeCamera === perspectiveCamera) {
+        lastPerspectivePosition = perspectiveCamera.position.clone();
+        lastPerspectiveTarget = controls.target.clone();
+      }
       const currentAspect = container.clientWidth / container.clientHeight;
-      orthographicCamera.left = (-frustumSize * currentAspect) / 2;
-      orthographicCamera.right = (frustumSize * currentAspect) / 2;
-      orthographicCamera.top = frustumSize / 2;
-      orthographicCamera.bottom = -frustumSize / 2;
+      orthographicCamera.left = (-currentOrthoHeight * currentAspect) / 2;
+      orthographicCamera.right = (currentOrthoHeight * currentAspect) / 2;
+      orthographicCamera.top = currentOrthoHeight / 2;
+      orthographicCamera.bottom = -currentOrthoHeight / 2;
       orthographicCamera.updateProjectionMatrix();
 
       orthographicCamera.position.copy(prevPos);
       activeCamera = orthographicCamera;
     } else {
-      perspectiveCamera.position.copy(prevPos);
+      perspectiveCamera.position.copy(lastPerspectivePosition);
       activeCamera = perspectiveCamera;
+      controls.target.copy(lastPerspectiveTarget);
     }
 
     controls.object = activeCamera;
-    controls.target.copy(prevTarget);
+    if (type === 'orthographic') controls.target.copy(prevTarget);
     controls.update();
+    notifyCameraChange();
+  };
+
+  const setViewDirection = (view: 'top' | 'bottom' | 'left' | 'right') => {
+    if (activeCamera === perspectiveCamera) {
+      lastPerspectivePosition = perspectiveCamera.position.clone();
+      lastPerspectiveTarget = controls.target.clone();
+    }
+    const box = new THREE.Box3().setFromObject(modelGroup);
+    if (box.isEmpty()) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const currentAspect = Math.max(container.clientWidth / container.clientHeight, 0.1);
+    const topOrBottom = view === 'top' || view === 'bottom';
+    const visibleWidth = size.x;
+    const visibleHeight = topOrBottom ? size.z : size.y;
+    const height = Math.max(visibleHeight * 1.18, visibleWidth / currentAspect * 1.18, 5);
+    currentOrthoHeight = height;
+    orthographicCamera.zoom = 1;
+    orthographicCamera.left = -height * currentAspect / 2;
+    orthographicCamera.right = height * currentAspect / 2;
+    orthographicCamera.top = height / 2;
+    orthographicCamera.bottom = -height / 2;
+    orthographicCamera.updateProjectionMatrix();
+    orthographicCamera.up.set(0, topOrBottom ? 0 : 1, view === 'top' ? -1 : view === 'bottom' ? 1 : 0);
+    const offset = view === 'top' ? new THREE.Vector3(0, 100, 0)
+      : view === 'bottom' ? new THREE.Vector3(0, -100, 0)
+        : view === 'left' ? new THREE.Vector3(0, 0, -100)
+          : new THREE.Vector3(0, 0, 100);
+    orthographicCamera.position.copy(center).add(offset);
+    orthographicCamera.lookAt(center);
+    activeCamera = orthographicCamera;
+    controls.object = activeCamera;
+    controls.target.copy(center);
+    controls.update();
+    notifyCameraChange();
   };
 
   const resetCamera = () => {
     activeCamera.position.set(15, 12, 18);
     controls.target.set(0, 2, 0);
+    if (activeCamera === perspectiveCamera) {
+      lastPerspectivePosition = perspectiveCamera.position.clone();
+      lastPerspectiveTarget = controls.target.clone();
+    }
     controls.update();
+    notifyCameraChange();
   };
 
   const frameObject = (object: THREE.Object3D) => {
@@ -201,10 +266,10 @@ export function createScene(container: HTMLElement): SceneContext {
     perspectiveCamera.aspect = newAspect;
     perspectiveCamera.updateProjectionMatrix();
 
-    orthographicCamera.left = (-frustumSize * newAspect) / 2;
-    orthographicCamera.right = (frustumSize * newAspect) / 2;
-    orthographicCamera.top = frustumSize / 2;
-    orthographicCamera.bottom = -frustumSize / 2;
+    orthographicCamera.left = (-currentOrthoHeight * newAspect) / 2;
+    orthographicCamera.right = (currentOrthoHeight * newAspect) / 2;
+    orthographicCamera.top = currentOrthoHeight / 2;
+    orthographicCamera.bottom = -currentOrthoHeight / 2;
     orthographicCamera.updateProjectionMatrix();
 
     renderer.setSize(width, height);
@@ -237,7 +302,7 @@ export function createScene(container: HTMLElement): SceneContext {
     renderer,
     perspectiveCamera,
     orthographicCamera,
-    activeCamera,
+    get activeCamera() { return activeCamera; },
     controls,
     gridHelper,
     axesHelper,
@@ -245,11 +310,13 @@ export function createScene(container: HTMLElement): SceneContext {
     hemiLight,
     setCameraType,
     resetCamera,
+    setViewDirection,
     frameObject,
     setGridVisible,
     setAxesVisible,
     setShadowsEnabled,
     setBackgroundColor,
+    addCameraChangeListener,
     dispose,
   };
 }

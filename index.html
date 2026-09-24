@@ -21,6 +21,18 @@
               <span id="scene-part-count" class="badge-tag">0 parts</span>
             </div>
           </div>
+          <div class="tree-tools-bar">
+            <div class="dropdown-wrapper" style="position:relative; flex:1;">
+              <button class="btn btn-sm btn-primary" id="btn-tree-add-mesh" style="width:100%; justify-content:center; gap:6px; background: linear-gradient(135deg, #0ea5e9, #6366f1); border:none; font-weight:600;" title="Add new 3D mesh or group">
+                <span>+ Add Object</span>
+                <span style="font-size:9px;">▼</span>
+              </button>
+              <div class="mesh-create-dropdown" id="tree-mesh-dropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; width:100%; min-width:200px; z-index:1000;"></div>
+            </div>
+            <button class="btn btn-sm" id="btn-tree-delete-selected" title="Delete selected object (Delete / Backspace)" style="color:var(--accent-rose); border-color: rgba(244, 63, 94, 0.35); padding: 0 9px;" disabled>
+              🗑️
+            </button>
+          </div>
           <div class="tree-search-bar">
             <input
               type="text"

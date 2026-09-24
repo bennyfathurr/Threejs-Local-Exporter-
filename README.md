@@ -8,9 +8,15 @@ A professional local 3D web editor and multi-format exporter designed for `img2t
 
 ## Features
 
+- **✨ Multimodal AI 3D Generation (img2threejs Studio)**:
+  - **Upload Any Reference Image**: Drag & drop any photo (architecture, vehicle, drone, furniture, prop).
+  - **Direct Vision LLM Integration**: Connect directly to **Google Gemini** (Gemini 2.5 Flash, 1.5 Pro) or **OpenAI** (GPT-4o, GPT-4o-mini, OpenRouter).
+  - **Zero Server Setup**: Calls official provider APIs directly from the browser; your API keys are stored securely in local browser storage only.
+  - **Automatic 3D Scene Assembly**: Transpiles and renders the generated procedural Three.js geometry with separated, named components and PBR materials.
+  - **Automatic Reference Alignment**: Automatically sets your uploaded photo as the viewport comparison overlay with an opacity slider for instant visual parity inspection.
 - **Procedural 3D Model Loading & In-Browser Code Execution**:
   - **In-Browser Code Editor ("⚡ Paste / Edit Code")**: Paste arbitrary TypeScript or JavaScript procedural model code directly into the browser. It gets transpiled on-the-fly via Sucrase with full access to `THREE`.
-  - **Direct File Upload ("📂 Upload File (.ts / .js / .glb)")**: Upload your generated `.ts`, `.js`, or `.glb` files directly via file picker or drag & drop.
+  - **Direct File Upload ("📂 Upload File")**: Upload your generated `.ts`, `.js`, or `.glb` files directly via file picker or drag & drop.
   - **Workspace File Auto-Discovery**: Drop any `.ts` / `.js` file into `src/generated/` and it immediately appears in the model dropdown.
   - **Custom Spec / Config JSON**: Pass custom arguments to `createModel(spec, options)` via the integrated parameter editor.
 - **Reference Image Comparison**: Non-destructive reference photo overlay with opacity slider and split view for visual alignment verification (never flattened as fake geometry).
