@@ -1,7 +1,13 @@
 import * as THREE from 'three';
-import { PRESETS, loadGlbFromFile, loadModelFromTsJsFile } from '../model/loadFactory';
+import { PRESETS } from '../model/loadFactory';
 import { SceneContext } from '../viewer/createScene';
 import { PRIMITIVE_DEFINITIONS, PrimitiveType } from '../model/meshOperations';
+import {
+  loadModelFromAnyFile,
+  hasModelDraftInStorage,
+  getModelDraftMetadata,
+} from '../model/projectSaveLoad';
+import { showToast } from './Toast';
 
 export interface ToolbarCallbacks {
   onModelLoaded: (root: THREE.Object3D, referenceImage?: string) => void;
@@ -11,6 +17,12 @@ export interface ToolbarCallbacks {
   onUndo?: () => void;
   onRedo?: () => void;
   onCreateMesh?: (type: PrimitiveType) => void;
+  onQuickSave?: () => void;
+  onSaveGlb?: () => void;
+  onSaveProjectJson?: () => void;
+  onOpenSaveModal?: () => void;
+  onSaveDraft?: () => void;
+  onRestoreDraft?: () => void;
 }
 
 export class Toolbar {
@@ -38,7 +50,7 @@ export class Toolbar {
         </div>
       </div>
 
-      <!-- CENTER MODEL SELECTOR & CODE BUTTONS -->
+      <!-- CENTER MODEL SELECTOR & ACTION BUTTONS -->
       <div class="model-switcher">
         <label style="font-size:11px; color:var(--text-muted); font-weight:600;">MODEL:</label>
         <select class="select-input" id="model-preset-select">
@@ -75,20 +87,70 @@ export class Toolbar {
           </div>
         </div>
 
+        <!-- SAVE FEATURE DROPDOWN -->
+        <div class="dropdown-wrapper" style="position:relative; margin-left: 4px;">
+          <div style="display:flex; align-items:stretch;">
+            <button class="btn btn-sm" id="btn-tb-quick-save" style="border-top-right-radius:0; border-bottom-right-radius:0; background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.45); color: #34d399; font-weight:600; padding-right:8px;" title="Save Model & Project (Ctrl+S / ⌘S)">
+              <span>💾 Save</span>
+            </button>
+            <button class="btn btn-sm" id="btn-tb-save-dropdown-toggle" style="border-top-left-radius:0; border-bottom-left-radius:0; border-left:none; padding:3px 6px; background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.45); color: #34d399;" title="More save options">
+              <span style="font-size:9px;">▼</span>
+            </button>
+          </div>
+          <div class="mesh-create-dropdown" id="tb-save-dropdown" style="display:none; position:absolute; top:calc(100% + 6px); left:0; min-width:230px; z-index:1000;">
+            <button class="mesh-dropdown-item" id="btn-save-opt-glb">
+              <span class="mesh-item-icon">💾</span>
+              <div class="mesh-item-text">
+                <span class="mesh-item-title">Save 3D Model (.glb)</span>
+                <span class="mesh-item-desc">Binary 3D asset for AR & Web</span>
+              </div>
+            </button>
+            <button class="mesh-dropdown-item" id="btn-save-opt-json">
+              <span class="mesh-item-icon">📁</span>
+              <div class="mesh-item-text">
+                <span class="mesh-item-title">Save Project File (.json)</span>
+                <span class="mesh-item-desc">Full editable Three.js scene</span>
+              </div>
+            </button>
+            <button class="mesh-dropdown-item" id="btn-save-opt-dialog">
+              <span class="mesh-item-icon">⚙️</span>
+              <div class="mesh-item-text">
+                <span class="mesh-item-title">Save Dialog & Options...</span>
+                <span class="mesh-item-desc">Center, ground, customize</span>
+              </div>
+            </button>
+            <div style="border-top:1px solid var(--border-color); margin:4px 0;"></div>
+            <button class="mesh-dropdown-item" id="btn-save-opt-draft">
+              <span class="mesh-item-icon">📦</span>
+              <div class="mesh-item-text">
+                <span class="mesh-item-title">Save to Browser Storage</span>
+                <span class="mesh-item-desc">Local auto-recovery draft</span>
+              </div>
+            </button>
+            <button class="mesh-dropdown-item" id="btn-restore-opt-draft">
+              <span class="mesh-item-icon">⟲</span>
+              <div class="mesh-item-text">
+                <span class="mesh-item-title">Restore Browser Draft</span>
+                <span class="mesh-item-desc" id="lbl-restore-draft-desc">No draft found</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- OPEN / LOAD FILE BUTTON (JSON, GLB, GLTF, TS, JS) -->
+        <label class="btn btn-sm" style="margin-left: 2px; cursor: pointer; background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.35); color: var(--accent-blue);" title="Open or load saved 3D model (.glb), project file (.json), or procedural code (.ts, .js)">
+          <span>📂 Open / Load</span>
+          <input type="file" id="universal-file-input" accept=".json,.glb,.gltf,.ts,.js,.tsx,.jsx" style="display:none;" />
+        </label>
+
         <!-- Open In-Browser Code Editor -->
         <button class="btn btn-sm" id="btn-open-code-modal" style="margin-left: 4px;" title="Paste or edit TypeScript/JavaScript Three.js code">
-          <span>⚡ Paste / Edit Code</span>
+          <span>⚡ Code</span>
         </button>
-
-        <!-- Direct Upload Button for TS, JS, GLB -->
-        <label class="btn btn-sm" style="margin-left: 2px; cursor: pointer;" title="Upload custom .ts, .js, or .glb file">
-          <span>📂 Upload File</span>
-          <input type="file" id="universal-file-input" accept=".ts,.js,.tsx,.jsx,.glb,.gltf" style="display:none;" />
-        </label>
 
         <!-- AI Generate Button -->
         <button class="btn btn-sm btn-primary" id="btn-open-ai-modal" style="margin-left: 6px; background: linear-gradient(135deg, #06b6d4, #6366f1); border:none; box-shadow: 0 0 12px rgba(6, 182, 212, 0.4); font-weight:600;" title="Generate 3D procedural model directly from an image using Gemini / OpenAI">
-          <span>✨ AI Generate (img2threejs)</span>
+          <span>✨ AI Generate</span>
         </button>
       </div>
 
@@ -109,6 +171,7 @@ export class Toolbar {
     `;
 
     this.bindEvents();
+    this.updateDraftState();
   }
 
   private bindEvents() {
@@ -132,29 +195,75 @@ export class Toolbar {
       this.callbacks.onOpenAiGenerator();
     });
 
-    // Universal File Input (.ts, .js, .glb, .gltf)
+    // Universal File Input (.json, .glb, .gltf, .ts, .js)
     const fileInput = this.container.querySelector('#universal-file-input') as HTMLInputElement;
     fileInput.addEventListener('change', async () => {
       if (fileInput.files && fileInput.files[0]) {
         const file = fileInput.files[0];
-        const ext = file.name.split('.').pop()?.toLowerCase();
-
         try {
-          let model: THREE.Object3D;
-          if (ext === 'glb' || ext === 'gltf') {
-            model = await loadGlbFromFile(file);
-          } else if (ext === 'ts' || ext === 'js' || ext === 'tsx' || ext === 'jsx') {
-            model = await loadModelFromTsJsFile(file);
-          } else {
-            throw new Error(`Unsupported file extension: .${ext}. Please upload .ts, .js, or .glb.`);
-          }
-
-          this.callbacks.onModelLoaded(model);
+          const result = await loadModelFromAnyFile(file);
+          this.callbacks.onModelLoaded(result.model);
+          showToast(`Loaded ${result.fileType.toUpperCase()}: ${result.name}`, '📂');
         } catch (err) {
           alert(`Failed to load file "${file.name}":\n\n${err instanceof Error ? err.message : String(err)}`);
+        } finally {
+          fileInput.value = '';
         }
       }
     });
+
+    // Save Feature Handlers
+    const btnQuickSave = this.container.querySelector('#btn-tb-quick-save') as HTMLButtonElement | null;
+    const btnSaveDropdownToggle = this.container.querySelector('#btn-tb-save-dropdown-toggle') as HTMLButtonElement | null;
+    const dropdownSave = this.container.querySelector('#tb-save-dropdown') as HTMLElement | null;
+
+    btnQuickSave?.addEventListener('click', () => {
+      this.callbacks.onQuickSave?.();
+    });
+
+    if (btnSaveDropdownToggle && dropdownSave) {
+      btnSaveDropdownToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isShown = dropdownSave.style.display === 'flex';
+        dropdownSave.style.display = isShown ? 'none' : 'flex';
+        this.updateDraftState();
+      });
+
+      this.container.querySelector('#btn-save-opt-glb')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdownSave.style.display = 'none';
+        this.callbacks.onSaveGlb?.();
+      });
+
+      this.container.querySelector('#btn-save-opt-json')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdownSave.style.display = 'none';
+        this.callbacks.onSaveProjectJson?.();
+      });
+
+      this.container.querySelector('#btn-save-opt-dialog')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdownSave.style.display = 'none';
+        this.callbacks.onOpenSaveModal?.();
+      });
+
+      this.container.querySelector('#btn-save-opt-draft')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdownSave.style.display = 'none';
+        this.callbacks.onSaveDraft?.();
+        this.updateDraftState();
+      });
+
+      this.container.querySelector('#btn-restore-opt-draft')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdownSave.style.display = 'none';
+        this.callbacks.onRestoreDraft?.();
+      });
+
+      window.addEventListener('click', () => {
+        dropdownSave.style.display = 'none';
+      });
+    }
 
     const bgColorPicker = this.container.querySelector('#bg-color-picker') as HTMLInputElement;
     const chkTransparent = this.container.querySelector('#chk-bg-transparent') as HTMLInputElement;
@@ -204,12 +313,35 @@ export class Toolbar {
     this.container.querySelector('#btn-info')?.addEventListener('click', () => {
       alert(
         'Three.js Procedural Model Exporter\n\n' +
-        '• Load procedural Three.js factories returning THREE.Group.\n' +
-        '• Directly upload or paste .ts / .js code generated by img2threejs or AI.\n' +
+        '• Save models as binary .glb or editable .json project files.\n' +
+        '• Drag-and-drop or load .glb, .gltf, .json, .ts, or .js files.\n' +
+        '• Press Ctrl+S / ⌘S anytime for Quick Save.\n' +
         '• Multi-format export: GLB, glTF, USDZ (visionOS/iOS), OBJ+MTL (.zip), STL, PLY.\n' +
         '• Live scene inventory, raycast selection, solo/lock modes, and validation report.'
       );
     });
+  }
+
+  public updateDraftState() {
+    const btnRestore = this.container.querySelector('#btn-restore-opt-draft') as HTMLButtonElement | null;
+    const lblDesc = this.container.querySelector('#lbl-restore-draft-desc') as HTMLElement | null;
+
+    if (btnRestore && lblDesc) {
+      const hasDraft = hasModelDraftInStorage();
+      btnRestore.disabled = !hasDraft;
+      if (hasDraft) {
+        const meta = getModelDraftMetadata();
+        if (meta) {
+          const timeAgo = Math.round((Date.now() - meta.timestamp) / 60000);
+          const timeStr = timeAgo <= 1 ? 'just now' : `${timeAgo}m ago`;
+          lblDesc.textContent = `"${meta.name}" (${timeStr})`;
+        } else {
+          lblDesc.textContent = 'Restore saved scene';
+        }
+      } else {
+        lblDesc.textContent = 'No draft found';
+      }
+    }
   }
 
   public updateHistoryState(canUndo: boolean, canRedo: boolean) {

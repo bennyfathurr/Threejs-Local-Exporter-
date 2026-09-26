@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { buildInventory, ModelSceneStats } from '../model/inventory';
 
-export type ExportFormat = 'glb' | 'gltf' | 'usdz' | 'obj' | 'stl' | 'ply';
+export type ExportFormat = 'glb' | 'gltf' | 'json' | 'usdz' | 'obj' | 'stl' | 'ply';
 
 export interface ValidationIssue {
   severity: 'info' | 'warning' | 'error';
@@ -40,6 +40,14 @@ export function validateExport(
 
   // Format-specific rules
   switch (format) {
+    case 'json':
+      issues.push({
+        severity: 'info',
+        title: 'Complete Three.js Project Scene',
+        detail: 'Exports full Three.js Object3D scene hierarchy, geometries, materials, names, and transforms with 100% editable fidelity.',
+      });
+      break;
+
     case 'glb':
     case 'gltf':
       issues.push({
