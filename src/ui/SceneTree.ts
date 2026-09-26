@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SelectionManager } from '../viewer/selection';
+import { ICONS } from './icons';
 
 export interface SceneTreeCallbacks {
   onSelect: (object: THREE.Object3D | null) => void;
@@ -99,7 +100,7 @@ export class SceneTree {
       const expander = document.createElement('span');
       expander.className = 'tree-expander';
       if (hasChildren) {
-        expander.innerHTML = isExpanded ? '▼' : '▶';
+        expander.innerHTML = isExpanded ? ICONS.chevronDown(10) : ICONS.chevronRight(10);
         expander.addEventListener('click', (e) => {
           e.stopPropagation();
           if (this.expandedUuids.has(node.uuid)) {
@@ -116,7 +117,7 @@ export class SceneTree {
       const icon = document.createElement('span');
       const isMesh = (node as THREE.Mesh).isMesh;
       icon.className = `tree-node-icon ${isMesh ? 'mesh' : 'group'}`;
-      icon.innerHTML = isMesh ? '⬢' : '📁';
+      icon.innerHTML = isMesh ? ICONS.mesh(13) : ICONS.group(13);
       row.appendChild(icon);
 
       // Name Label (with inline rename support)
@@ -138,13 +139,13 @@ export class SceneTree {
       // Visibility button
       const visBtn = document.createElement('button');
       visBtn.className = `tree-action-btn ${node.visible ? '' : 'active'}`;
-      visBtn.innerHTML = node.visible ? '👁️' : '🚫';
+      visBtn.innerHTML = node.visible ? ICONS.eye(12) : ICONS.eyeOff(12);
       visBtn.title = node.visible ? 'Hide part' : 'Show part';
       visBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         node.visible = !node.visible;
         this.callbacks.onVisibilityChange(node, node.visible);
-        visBtn.innerHTML = node.visible ? '👁️' : '🚫';
+        visBtn.innerHTML = node.visible ? ICONS.eye(12) : ICONS.eyeOff(12);
         visBtn.classList.toggle('active', !node.visible);
       });
       actions.appendChild(visBtn);
@@ -167,7 +168,7 @@ export class SceneTree {
       const lockBtn = document.createElement('button');
       const isLocked = this.selectionManager.isLocked(node);
       lockBtn.className = `tree-action-btn ${isLocked ? 'active' : ''}`;
-      lockBtn.innerHTML = isLocked ? '🔒' : '🔓';
+      lockBtn.innerHTML = isLocked ? ICONS.lock(12) : ICONS.unlock(12);
       lockBtn.title = isLocked ? 'Unlock part' : 'Lock part';
       lockBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -181,7 +182,7 @@ export class SceneTree {
       if (node !== this.rootObject && this.callbacks.onDelete) {
         const delBtn = document.createElement('button');
         delBtn.className = 'tree-action-btn delete-btn';
-        delBtn.innerHTML = '🗑️';
+        delBtn.innerHTML = ICONS.trash(12);
         delBtn.title = `Delete "${name}" (Delete / Backspace)`;
         delBtn.addEventListener('click', (e) => {
           e.stopPropagation();

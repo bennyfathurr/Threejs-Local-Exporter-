@@ -348,13 +348,17 @@ body, html {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
   color: var(--text-muted);
   cursor: pointer;
 }
 
 .tree-node-icon {
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
   color: var(--accent-cyan);
 }
 
@@ -372,6 +376,7 @@ body, html {
 
 .tree-node-actions {
   display: none;
+  align-items: center;
   gap: 3px;
 }
 
@@ -387,8 +392,10 @@ body, html {
   cursor: pointer;
   padding: 2px 4px;
   border-radius: 3px;
-  font-size: 11px;
-  transition: color 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
 }
 
 .tree-action-btn:hover {

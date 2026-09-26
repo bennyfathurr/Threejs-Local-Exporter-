@@ -3,6 +3,7 @@ import { SceneContext } from '../viewer/createScene';
 import { ViewMode, applyViewMode } from '../viewer/viewModes';
 import { TransformGizmoManager } from '../viewer/transformGizmo';
 import { HistoryManager } from '../model/history';
+import { ICONS } from './icons';
 
 export class ViewportOverlay {
   private container: HTMLElement;
@@ -35,19 +36,19 @@ export class ViewportOverlay {
       <!-- Unity Transform Gizmo Tools -->
       <div class="toolbar-group transform-tools" aria-label="Transform Tools">
         <button class="tool-btn active" id="btn-gizmo-trans" title="Move Tool (Shortcut: W) - Drag red/green/blue axis or plane to translate">
-          ✛ Move
+          ${ICONS.move(12)} <span>Move</span>
         </button>
         <button class="tool-btn" id="btn-gizmo-rot" title="Rotate Tool (Shortcut: E) - Drag rings to rotate">
-          🔄 Rotate
+          ${ICONS.rotate(12)} <span>Rotate</span>
         </button>
         <button class="tool-btn" id="btn-gizmo-scale" title="Scale Tool (Shortcut: R) - Drag handles to scale">
-          ⤢ Scale
+          ${ICONS.scale(12)} <span>Scale</span>
         </button>
         <button class="tool-btn" id="btn-gizmo-space" title="Toggle Coordinate Space: World / Local (Shortcut: X)">
-          🌐 <span id="lbl-gizmo-space">World</span>
+          ${ICONS.world(12)} <span id="lbl-gizmo-space">World</span>
         </button>
         <button class="tool-btn" id="btn-gizmo-snap" title="Toggle Snapping (0.5m / 15°)">
-          🧲 Snap
+          ${ICONS.magnet(12)} <span>Snap</span>
         </button>
       </div>
 
@@ -82,9 +83,9 @@ export class ViewportOverlay {
 
       <!-- Actions -->
       <div class="toolbar-group">
-        <button class="tool-btn" id="btn-vp-undo" title="Undo (Ctrl+Z / ⌘Z)" disabled>↶</button>
-        <button class="tool-btn" id="btn-vp-redo" title="Redo (Ctrl+Y / ⌘⇧Z)" disabled>↷</button>
-        <button class="tool-btn" id="btn-reset-view" title="Reset Camera View">⟲ Reset</button>
+        <button class="tool-btn" id="btn-vp-undo" title="Undo (Ctrl+Z / ⌘Z)" disabled>${ICONS.undo(12)}</button>
+        <button class="tool-btn" id="btn-vp-redo" title="Redo (Ctrl+Y / ⌘⇧Z)" disabled>${ICONS.redo(12)}</button>
+        <button class="tool-btn" id="btn-reset-view" title="Reset Camera View">${ICONS.reset(12)} <span>Reset</span></button>
       </div>
     `;
     this.container.appendChild(toolbar);
