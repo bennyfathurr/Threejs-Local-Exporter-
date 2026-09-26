@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ICONS } from '../ui/icons';
 
 export type PrimitiveType =
   | 'box'
@@ -18,14 +19,14 @@ export interface PrimitiveDefinition {
 }
 
 export const PRIMITIVE_DEFINITIONS: PrimitiveDefinition[] = [
-  { type: 'box', label: 'Cube / Box', icon: '📦', description: 'Box mesh (1×1×1)' },
-  { type: 'sphere', label: 'Sphere', icon: '🌐', description: 'UV Sphere mesh (r=0.7)' },
-  { type: 'cylinder', label: 'Cylinder', icon: '🥫', description: 'Cylinder mesh (r=0.5, h=1.5)' },
-  { type: 'cone', label: 'Cone', icon: '🔺', description: 'Cone mesh (r=0.6, h=1.5)' },
-  { type: 'torus', label: 'Torus / Donut', icon: '🍩', description: 'Torus ring mesh (r=0.6, tube=0.2)' },
-  { type: 'plane', label: 'Plane', icon: '🔲', description: 'Flat ground plane (2×2)' },
-  { type: 'capsule', label: 'Capsule', icon: '💊', description: 'Capsule pill mesh (r=0.4, h=0.8)' },
-  { type: 'group', label: 'Empty Group', icon: '📁', description: 'Folder group for organizing hierarchy' },
+  { type: 'box', label: 'Cube / Box', icon: ICONS.box(16), description: 'Box mesh (1×1×1)' },
+  { type: 'sphere', label: 'Sphere', icon: ICONS.sphere(16), description: 'UV Sphere mesh (r=0.7)' },
+  { type: 'cylinder', label: 'Cylinder', icon: ICONS.cylinder(16), description: 'Cylinder mesh (r=0.5, h=1.5)' },
+  { type: 'cone', label: 'Cone', icon: ICONS.cone(16), description: 'Cone mesh (r=0.6, h=1.5)' },
+  { type: 'torus', label: 'Torus / Donut', icon: ICONS.torus(16), description: 'Torus ring mesh (r=0.6, tube=0.2)' },
+  { type: 'plane', label: 'Plane', icon: ICONS.plane(16), description: 'Flat ground plane (2×2)' },
+  { type: 'capsule', label: 'Capsule', icon: ICONS.capsule(16), description: 'Capsule pill mesh (r=0.4, h=0.8)' },
+  { type: 'group', label: 'Empty Group', icon: ICONS.group(16), description: 'Folder group for organizing hierarchy' },
 ];
 
 const MODERN_COLORS = [

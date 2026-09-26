@@ -8,6 +8,7 @@ import {
   getModelDraftMetadata,
 } from '../model/projectSaveLoad';
 import { showToast } from './Toast';
+import { ICONS } from './icons';
 
 export interface ToolbarCallbacks {
   onModelLoaded: (root: THREE.Object3D, referenceImage?: string) => void;
@@ -38,15 +39,21 @@ export class Toolbar {
     this.render();
   }
 
+  public getActivePresetId(): string {
+    return this.activePresetId;
+  }
+
   public render() {
     this.container.className = 'app-header';
     this.container.innerHTML = `
       <!-- LEFT BRAND -->
       <div class="brand-section">
-        <div class="brand-logo">▲</div>
+        <div class="brand-logo" style="background:transparent; box-shadow:none;">
+          ${ICONS.logo(26)}
+        </div>
         <div>
-          <span class="brand-title">Three.js Local Exporter</span>
-          <span class="badge-tag" style="margin-left: 6px;">img2threejs</span>
+          <span class="brand-title">Three.js Model Studio</span>
+          <span class="badge-tag" style="margin-left: 6px;">Studio</span>
         </div>
       </div>
 
@@ -60,17 +67,17 @@ export class Toolbar {
         <!-- Undo / Redo Buttons -->
         <div style="display:flex; align-items:center; gap:3px; margin-left: 4px; padding: 0 4px; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">
           <button class="btn btn-sm" id="btn-undo" title="Undo (Ctrl+Z / ⌘Z)" disabled>
-            <span>↶</span> Undo
+            ${ICONS.undo(12)} <span>Undo</span>
           </button>
           <button class="btn btn-sm" id="btn-redo" title="Redo (Ctrl+Y / ⌘⇧Z)" disabled>
-            <span>↷</span> Redo
+            ${ICONS.redo(12)} <span>Redo</span>
           </button>
         </div>
 
         <!-- Add Primitive Mesh Dropdown -->
         <div class="dropdown-wrapper" style="position:relative; margin-left: 4px;">
           <button class="btn btn-sm" id="btn-tb-add-mesh" style="background: rgba(14, 165, 233, 0.12); border-color: rgba(14, 165, 233, 0.35); color: var(--accent-cyan); font-weight:600;" title="Create a new 3D mesh primitive">
-            <span>+ Add Mesh ▾</span>
+            ${ICONS.box(13)} <span>+ Add Mesh</span> <span style="font-size:9px;">▼</span>
           </button>
           <div class="mesh-create-dropdown" id="tb-mesh-dropdown" style="display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:1000;">
             ${PRIMITIVE_DEFINITIONS.map(
@@ -91,7 +98,7 @@ export class Toolbar {
         <div class="dropdown-wrapper" style="position:relative; margin-left: 4px;">
           <div style="display:flex; align-items:stretch;">
             <button class="btn btn-sm" id="btn-tb-quick-save" style="border-top-right-radius:0; border-bottom-right-radius:0; background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.45); color: #34d399; font-weight:600; padding-right:8px;" title="Save Model & Project (Ctrl+S / ⌘S)">
-              <span>💾 Save</span>
+              ${ICONS.save(13)} <span>Save</span>
             </button>
             <button class="btn btn-sm" id="btn-tb-save-dropdown-toggle" style="border-top-left-radius:0; border-bottom-left-radius:0; border-left:none; padding:3px 6px; background: rgba(16, 185, 129, 0.14); border-color: rgba(16, 185, 129, 0.45); color: #34d399;" title="More save options">
               <span style="font-size:9px;">▼</span>
@@ -99,21 +106,21 @@ export class Toolbar {
           </div>
           <div class="mesh-create-dropdown" id="tb-save-dropdown" style="display:none; position:absolute; top:calc(100% + 6px); left:0; min-width:230px; z-index:1000;">
             <button class="mesh-dropdown-item" id="btn-save-opt-glb">
-              <span class="mesh-item-icon">💾</span>
+              <span class="mesh-item-icon" style="color:var(--accent-cyan);">${ICONS.box(15)}</span>
               <div class="mesh-item-text">
                 <span class="mesh-item-title">Save 3D Model (.glb)</span>
                 <span class="mesh-item-desc">Binary 3D asset for AR & Web</span>
               </div>
             </button>
             <button class="mesh-dropdown-item" id="btn-save-opt-json">
-              <span class="mesh-item-icon">📁</span>
+              <span class="mesh-item-icon" style="color:var(--accent-blue);">${ICONS.save(15)}</span>
               <div class="mesh-item-text">
                 <span class="mesh-item-title">Save Project File (.json)</span>
                 <span class="mesh-item-desc">Full editable Three.js scene</span>
               </div>
             </button>
             <button class="mesh-dropdown-item" id="btn-save-opt-dialog">
-              <span class="mesh-item-icon">⚙️</span>
+              <span class="mesh-item-icon" style="color:var(--accent-indigo);">${ICONS.sparkles(15)}</span>
               <div class="mesh-item-text">
                 <span class="mesh-item-title">Save Dialog & Options...</span>
                 <span class="mesh-item-desc">Center, ground, customize</span>
@@ -121,14 +128,14 @@ export class Toolbar {
             </button>
             <div style="border-top:1px solid var(--border-color); margin:4px 0;"></div>
             <button class="mesh-dropdown-item" id="btn-save-opt-draft">
-              <span class="mesh-item-icon">📦</span>
+              <span class="mesh-item-icon" style="color:var(--accent-emerald);">${ICONS.download(15)}</span>
               <div class="mesh-item-text">
                 <span class="mesh-item-title">Save to Browser Storage</span>
                 <span class="mesh-item-desc">Local auto-recovery draft</span>
               </div>
             </button>
             <button class="mesh-dropdown-item" id="btn-restore-opt-draft">
-              <span class="mesh-item-icon">⟲</span>
+              <span class="mesh-item-icon" style="color:var(--accent-amber);">${ICONS.reset(15)}</span>
               <div class="mesh-item-text">
                 <span class="mesh-item-title">Restore Browser Draft</span>
                 <span class="mesh-item-desc" id="lbl-restore-draft-desc">No draft found</span>
@@ -139,18 +146,18 @@ export class Toolbar {
 
         <!-- OPEN / LOAD FILE BUTTON (JSON, GLB, GLTF, TS, JS) -->
         <label class="btn btn-sm" style="margin-left: 2px; cursor: pointer; background: rgba(56, 189, 248, 0.1); border-color: rgba(56, 189, 248, 0.35); color: var(--accent-blue);" title="Open or load saved 3D model (.glb), project file (.json), or procedural code (.ts, .js)">
-          <span>📂 Open / Load</span>
+          ${ICONS.folder(13)} <span>Open / Load</span>
           <input type="file" id="universal-file-input" accept=".json,.glb,.gltf,.ts,.js,.tsx,.jsx" style="display:none;" />
         </label>
 
         <!-- Open In-Browser Code Editor -->
-        <button class="btn btn-sm" id="btn-open-code-modal" style="margin-left: 4px;" title="Paste or edit TypeScript/JavaScript Three.js code">
-          <span>⚡ Code</span>
+        <button class="btn btn-sm" id="btn-open-code-modal" style="margin-left: 4px;" title="View or edit TypeScript/JavaScript Three.js code">
+          ${ICONS.code(13)} <span>Code</span>
         </button>
 
         <!-- AI Generate Button -->
         <button class="btn btn-sm btn-primary" id="btn-open-ai-modal" style="margin-left: 6px; background: linear-gradient(135deg, #06b6d4, #6366f1); border:none; box-shadow: 0 0 12px rgba(6, 182, 212, 0.4); font-weight:600;" title="Generate 3D procedural model directly from an image using Gemini / OpenAI">
-          <span>✨ AI Generate</span>
+          ${ICONS.sparkles(13)} <span>AI Generate</span>
         </button>
       </div>
 
@@ -166,7 +173,9 @@ export class Toolbar {
           </label>
         </div>
 
-        <button class="btn btn-sm" id="btn-info" title="View Specification Info">ℹ️ Specs</button>
+        <button class="btn btn-sm" id="btn-info" title="View Studio Specification Info">
+          ${ICONS.info(13)} <span>Specs</span>
+        </button>
       </div>
     `;
 

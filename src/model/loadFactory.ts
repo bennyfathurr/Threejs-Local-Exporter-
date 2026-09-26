@@ -9,6 +9,7 @@ export interface ModelPreset {
   description: string;
   defaultSpec?: unknown;
   referenceImage?: string;
+  sourceCode?: string;
   factory: (spec?: unknown, options?: unknown) => THREE.Object3D;
 }
 
@@ -17,6 +18,13 @@ const generatedModules = import.meta.glob('../generated/**/*.{ts,js}', { eager: 
   string,
   Record<string, unknown>
 >;
+
+// Also discover raw source code for code inspection and editing
+const rawSources = import.meta.glob('../generated/**/*.{ts,js}', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
 
 export function getDiscoveredPresets(): ModelPreset[] {
   const presets: ModelPreset[] = [];
@@ -69,6 +77,7 @@ export function getDiscoveredPresets(): ModelPreset[] {
         category: filename.includes('drone') ? 'Industrial' : 'Architectural',
         description: `Factory from ${filePath}`,
         referenceImage,
+        sourceCode: rawSources[filePath] || '',
         factory: (spec, opt) => (factoryFn as (s?: unknown, o?: unknown) => THREE.Object3D)(spec, opt),
       });
     }
@@ -87,6 +96,11 @@ export function getDiscoveredPresets(): ModelPreset[] {
 }
 
 export const PRESETS: ModelPreset[] = getDiscoveredPresets();
+
+export function getPresetSourceCode(id: string): string | undefined {
+  const p = PRESETS.find((preset) => preset.id === id);
+  return p?.sourceCode;
+}
 
 /**
  * Executes raw TypeScript or JavaScript procedural model code in the browser.

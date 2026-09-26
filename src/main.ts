@@ -413,11 +413,14 @@ window.addEventListener('DOMContentLoaded', () => {
     historyManager
   );
 
-  // 9. Initialize In-Browser Code Modal for Arbitrary TS/JS
+  // 9. Initialize In-Browser Code Modal with live TypeScript inspection & decompilation
+  let activePresetId = PRESETS[0]?.id || 'createmodel';
   const codeModal = new CodeModal({
     onModelLoaded: (newModel) => {
       loadNewModel(newModel);
     },
+    getCurrentModel: () => currentModel,
+    getCurrentPresetId: () => toolbar ? toolbar.getActivePresetId() : activePresetId,
   });
 
   // 10. Initialize Multimodal img2threejs AI Generator Modal
