@@ -102,7 +102,7 @@ describe('Project & Model Save / Load Suite', () => {
     mesh.name = 'StandAlone_Sphere';
 
     const rawJson = mesh.toJSON();
-    const loaded = loadModelFromProjectJSON(rawJson);
+    const loaded = loadModelFromProjectJSON(rawJson as unknown as Record<string, unknown>);
 
     expect(loaded).toBeDefined();
     expect(loaded.name).toBe('StandAlone_Sphere');

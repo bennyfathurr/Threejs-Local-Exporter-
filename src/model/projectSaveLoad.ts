@@ -58,7 +58,7 @@ export function exportModelToProjectJSON(
  * Loads and reconstructs a THREE.Object3D hierarchy from a project JSON string or Object3D JSON object.
  */
 export function loadModelFromProjectJSON(
-  input: string | Record<string, unknown>
+  input: string | Record<string, unknown> | object
 ): THREE.Object3D {
   let parsed: Record<string, unknown>;
 
@@ -69,7 +69,7 @@ export function loadModelFromProjectJSON(
       throw new Error(`Invalid JSON format: ${err instanceof Error ? err.message : String(err)}`);
     }
   } else {
-    parsed = input;
+    parsed = input as Record<string, unknown>;
   }
 
   // Check if this is a ThreejsProjectManifest or direct Three.js scene/object JSON
