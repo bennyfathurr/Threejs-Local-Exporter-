@@ -38,11 +38,26 @@ export function getDiscoveredPresets(): ModelPreset[] {
 
       let referenceImage: string | undefined;
 
-      if (filename.toLowerCase().includes('lakeside')) {
+      if (filename.toLowerCase().includes('benteng')) {
+        displayName = 'Benteng Kuto Besak (Palembang Heritage)';
+        referenceImage = '/reference/benteng-kuto-besak-production-reference.png';
+      } else if (filename.toLowerCase().includes('lakeside')) {
         displayName = 'Kambang Iwak (draft four-view study)';
         referenceImage = '/reference/kambang-iwak-production-reference.png';
       } else if (filename.toLowerCase().includes('drone')) {
         displayName = 'Autonomous Survey Drone';
+      } else if (filename.toLowerCase().includes('ledeng')) {
+        displayName = 'Menara Ledeng (Kantor Walikota Palembang)';
+        referenceImage = '/reference/menara-ledeng-production-reference.png';
+      } else if (filename.toLowerCase().includes('rumahdinas') || (filename.toLowerCase().includes('rumah') && filename.toLowerCase().includes('walikota'))) {
+        displayName = 'Rumah Dinas Walikota Palembang';
+        referenceImage = '/reference/rumah-dinas-walikota-production-reference.png';
+      } else if (filename.toLowerCase().includes('vanderberj') || filename.toLowerCase().includes('vanderberg') || filename.toLowerCase().includes('gedungvander')) {
+        displayName = 'Gedung Van der Berj (Palembang Heritage)';
+        referenceImage = '/reference/gedung-van-der-berj-production-reference.png';
+      } else if (filename.toLowerCase().includes('museum') || filename.toLowerCase().includes('smb') || filename.toLowerCase().includes('badaruddin')) {
+        displayName = 'Museum Sultan Mahmud Badaruddin II (Palembang Heritage)';
+        referenceImage = '/reference/museum-smb2-production-reference.png';
       } else if (filename.toLowerCase() === 'createmodel' || filename.toLowerCase().includes('villa')) {
         displayName = 'Modern Architectural Villa';
         referenceImage = '/reference/aerial_reference.jpg';
@@ -59,8 +74,10 @@ export function getDiscoveredPresets(): ModelPreset[] {
     }
   }
 
-  // Put the user's lakeside town first in the list
+  // Put Benteng Kuto Besak first in the list
   presets.sort((a, b) => {
+    if (a.id.includes('benteng')) return -1;
+    if (b.id.includes('benteng')) return 1;
     if (a.id.includes('lakeside')) return -1;
     if (b.id.includes('lakeside')) return 1;
     return 0;

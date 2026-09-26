@@ -221,7 +221,10 @@ export function createScene(container: HTMLElement): SceneContext {
     let cameraDistance = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.5;
     cameraDistance = Math.max(cameraDistance, 3);
 
-    const direction = new THREE.Vector3(1, 0.7, 1).normalize();
+    const requested = object.userData.preferredViewDirection as number[] | undefined;
+    const direction = requested?.length === 3 && requested.every(Number.isFinite)
+      ? new THREE.Vector3(requested[0], requested[1], requested[2]).normalize()
+      : new THREE.Vector3(1, 0.7, 1).normalize();
     activeCamera.position.copy(center).addScaledVector(direction, cameraDistance);
     controls.target.copy(center);
     controls.update();

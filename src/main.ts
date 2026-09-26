@@ -28,6 +28,14 @@ import {
   PRIMITIVE_DEFINITIONS,
   PrimitiveType,
 } from './model/meshOperations';
+import { SaveModal } from './ui/SaveModal';
+import {
+  downloadModelAsGlb,
+  downloadModelAsProjectFile,
+  saveModelDraftToStorage,
+  loadModelDraftFromStorage,
+  loadModelFromAnyFile,
+} from './model/projectSaveLoad';
 
 window.addEventListener('DOMContentLoaded', () => {
   const canvasContainer = document.getElementById('canvas-container') as HTMLElement;
@@ -424,7 +432,14 @@ window.addEventListener('DOMContentLoaded', () => {
     },
   });
 
-  // 11. Initialize Top Toolbar
+  // 11. Initialize Save Modal Dialog
+  const saveModal = new SaveModal({
+    onSaved: () => {
+      toolbar?.updateDraftState();
+    },
+  });
+
+  // 12. Initialize Top Toolbar
   toolbar = new Toolbar(appHeader, sceneCtx, {
     onModelLoaded: (newModel, refImg) => {
       historyManager.clear();
@@ -448,9 +463,58 @@ window.addEventListener('DOMContentLoaded', () => {
     onCreateMesh: (type) => {
       handleCreateMesh(type);
     },
+    onQuickSave: () => {
+      const baseName = (currentModel.name || 'procedural_model').replace(/\s+/g, '_');
+      showToast(`Exporting ${baseName}.glb...`, '⏳');
+      downloadModelAsGlb(currentModel, baseName)
+        .then(() => {
+          showToast(`Saved 3D Model: ${baseName}.glb`, '💾');
+        })
+        .catch((err) => {
+          showToast(`Save failed: ${err instanceof Error ? err.message : String(err)}`, '⚠️');
+        });
+    },
+    onSaveGlb: () => {
+      const baseName = (currentModel.name || 'procedural_model').replace(/\s+/g, '_');
+      showToast(`Exporting ${baseName}.glb...`, '⏳');
+      downloadModelAsGlb(currentModel, baseName)
+        .then(() => {
+          showToast(`Saved 3D Model: ${baseName}.glb`, '💾');
+        })
+        .catch((err) => {
+          showToast(`Save failed: ${err instanceof Error ? err.message : String(err)}`, '⚠️');
+        });
+    },
+    onSaveProjectJson: () => {
+      const baseName = (currentModel.name || 'procedural_model').replace(/\s+/g, '_');
+      downloadModelAsProjectFile(currentModel, baseName);
+      showToast(`Saved Project: ${baseName}.project.json`, '📁');
+    },
+    onOpenSaveModal: () => {
+      saveModal.open(currentModel);
+    },
+    onSaveDraft: () => {
+      const result = saveModelDraftToStorage(currentModel);
+      if (result.success) {
+        showToast('Draft saved to browser storage', '📦');
+        toolbar?.updateDraftState();
+      } else {
+        showToast(`Failed to save draft: ${result.error || 'Storage error'}`, '⚠️');
+      }
+    },
+    onRestoreDraft: () => {
+      const draft = loadModelDraftFromStorage();
+      if (draft) {
+        historyManager.clear();
+        loadNewModel(draft.model);
+        showToast(`Restored draft: "${draft.name}"`, '⟲');
+      } else {
+        showToast('No saved draft found in storage', '⚠️');
+      }
+    },
   });
 
-  // 12. Initialize Sidebar Add Mesh Dropdown & Delete Button
+  // 13. Initialize Sidebar Add Mesh Dropdown & Delete Button
   const treeMeshDropdown = document.getElementById('tree-mesh-dropdown') as HTMLElement | null;
   const btnTreeAddMesh = document.getElementById('btn-tree-add-mesh') as HTMLButtonElement | null;
   const btnTreeDelete = document.getElementById('btn-tree-delete-selected') as HTMLButtonElement | null;
@@ -496,7 +560,7 @@ window.addEventListener('DOMContentLoaded', () => {
     handleDeleteObject();
   });
 
-  // 13. Global Keyboard Shortcuts (Undo, Redo, Delete)
+  // 14. Global Keyboard Shortcuts (Undo, Redo, Delete, Save, Open)
   window.addEventListener('keydown', (e) => {
     const activeEl = document.activeElement;
     const tag = activeEl?.tagName?.toLowerCase();
@@ -515,7 +579,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const isCtrlOrCmd = e.ctrlKey || e.metaKey;
     if (isCtrlOrCmd && !e.altKey) {
-      if (e.key.toLowerCase() === 'z') {
+      if (e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveModal.open(currentModel);
+        return;
+      } else if (e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        const fileInput = document.getElementById('universal-file-input') as HTMLInputElement | null;
+        fileInput?.click();
+        return;
+      } else if (e.key.toLowerCase() === 'z') {
         e.preventDefault();
         if (e.shiftKey) {
           historyManager.redo();
@@ -525,6 +598,61 @@ window.addEventListener('DOMContentLoaded', () => {
       } else if (e.key.toLowerCase() === 'y') {
         e.preventDefault();
         historyManager.redo();
+      }
+    }
+  });
+
+  // 15. Viewport Drag-and-Drop Loading (.glb, .gltf, .json, .ts, .js)
+  const viewportCenter = document.getElementById('viewport-center') as HTMLElement;
+  const dropZone = document.createElement('div');
+  dropZone.className = 'viewport-drop-zone';
+  dropZone.id = 'viewport-drop-zone';
+  dropZone.innerHTML = `
+    <div class="viewport-drop-icon">📥</div>
+    <div class="viewport-drop-title">Drop 3D Model or Project File</div>
+    <div class="viewport-drop-subtitle">Supports .glb, .gltf, .json, .ts, .js</div>
+  `;
+  viewportCenter.appendChild(dropZone);
+
+  let dragCounter = 0;
+
+  viewportCenter.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    dragCounter++;
+    dropZone.classList.add('active');
+  });
+
+  viewportCenter.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  });
+
+  viewportCenter.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      dropZone.classList.remove('active');
+    }
+  });
+
+  viewportCenter.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dragCounter = 0;
+    dropZone.classList.remove('active');
+
+    if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      try {
+        showToast(`Loading ${file.name}...`, '⏳');
+        const result = await loadModelFromAnyFile(file);
+        historyManager.clear();
+        loadNewModel(result.model);
+        showToast(`Loaded ${result.fileType.toUpperCase()}: ${result.name}`, '📂');
+      } catch (err) {
+        showToast(`Failed to load file: ${err instanceof Error ? err.message : String(err)}`, '⚠️');
       }
     }
   });

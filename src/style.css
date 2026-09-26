@@ -970,3 +970,74 @@ body, html {
   font-size: 13px;
 }
 
+/* SAVE MODAL & STATS PILLS */
+.save-stat-pill {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-input);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.save-format-card {
+  transition: all 0.15s ease;
+}
+
+.save-format-card:hover {
+  border-color: #3b476e !important;
+}
+
+/* DRAG AND DROP VIEWPORT OVERLAY */
+.viewport-drop-zone {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  border: 2px dashed var(--accent-cyan);
+  background: rgba(10, 14, 26, 0.85);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: scale(0.98);
+}
+
+.viewport-drop-zone.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.viewport-drop-icon {
+  font-size: 42px;
+  animation: bounceDrop 1.2s infinite ease-in-out;
+}
+
+.viewport-drop-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.viewport-drop-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+@keyframes bounceDrop {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+

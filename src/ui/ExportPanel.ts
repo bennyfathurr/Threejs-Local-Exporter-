@@ -9,6 +9,7 @@ import { exportObjWithMtl } from '../export/exportObj';
 import { exportStl } from '../export/exportStl';
 import { exportPly } from '../export/exportPly';
 import { downloadFile } from '../export/download';
+import { downloadModelAsProjectFile } from '../model/projectSaveLoad';
 
 export interface ExportSettings {
   format: ExportFormat;
@@ -82,6 +83,7 @@ export class ExportPanel {
           <div class="format-pills">
             <button class="format-pill ${this.settings.format === 'glb' ? 'active' : ''}" data-fmt="glb">GLB (Binary)</button>
             <button class="format-pill ${this.settings.format === 'gltf' ? 'active' : ''}" data-fmt="gltf">glTF (JSON)</button>
+            <button class="format-pill ${this.settings.format === 'json' ? 'active' : ''}" data-fmt="json">JSON (Project)</button>
             <button class="format-pill ${this.settings.format === 'usdz' ? 'active' : ''}" data-fmt="usdz">USDZ (Apple AR)</button>
             <button class="format-pill ${this.settings.format === 'obj' ? 'active' : ''}" data-fmt="obj">OBJ + MTL (ZIP)</button>
             <button class="format-pill ${this.settings.format === 'stl' ? 'active' : ''}" data-fmt="stl">STL</button>
@@ -281,6 +283,10 @@ export class ExportPanel {
         case 'gltf': {
           const blob = await exportGltf(normalized);
           downloadFile(blob, `${baseFilename}.gltf`, 'model/gltf+json');
+          break;
+        }
+        case 'json': {
+          downloadModelAsProjectFile(normalized, baseFilename);
           break;
         }
         case 'usdz': {
